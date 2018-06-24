@@ -1,0 +1,56 @@
+.Dd June 21, 2018
+.Dt WORKDAY(1)
+.\"
+.Sh NAME
+.Nm workday
+.Nd command line time card and more
+.Sh SYNOPSIS
+.Nm workday
+.Ar subcommand Op Ar arguments
+.Op --logfile Ar file
+.Sh DESCRIPTION
+The
+.Nm workday
+utility logs and manages your working hours. It generates human readable data 
+files that it can parse and summarize. Using 
+.Nm workday
+consists of using one of 5 subcommands.
+.Pp
+.Sh SUBCOMMANDS
+.Bl -tag -width -indent
+.It Xo Ar begin
+.Xc
+Marks the start of your workday. If you are not in a state to start the work day (ie: never ended your last shift, never resumed from a pause), you will be asked to rectify this situation through stdin. You can choose to delete the previous day's work, or estimate a stopping point. 
+.It Xo Ar pause
+.Xc
+Pauses your shift. Time after this pause, until the next resume, will not be counted (for your daily total, it is tracked for use in the stat subcommand). If you are not in a state to pause the work day (ie: are currently paused, have not started), you will be asked to rectify this situation through stdin.
+.It Xo Ar resume
+.Xc
+Resumes your shift.  blah blah blah
+.It Xo Ar end
+.Xc
+Ends your shift. blah blah blah
+.It Xo Ar stat
+.Op Fl tbg
+.Xc
+Displays statistics about your hours.
+.Bl -tag -width -indent
+.It Fl t
+Total all of your hours.
+.It Fl b
+Compute basic statistics about your hours. Mean, Median, Max, Min. 
+.It Fl g
+Draw a simple bar graph of your hours.
+.El
+.El
+.Sh LOG FILES
+Log files are where 
+.Nm workday
+stores its human readable data. By default, logs are written to ~/.workday.txt
+however, by passing 
+.Op --logfile Ar file
+you can specify the location from which 
+.Nm workday
+reads and writes.
+.Sh AUTHORS
+Written by Brian Tracy and Ian Woodfill
