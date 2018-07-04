@@ -39,3 +39,5 @@ Examples of each step:
 To accomplish all of these automatically, you can use the install.sh script.
 
     $ curl 'https://raw.githubusercontent.com/briantracy/workday/master/install.sh' -o install.sh && sh install.sh && rm install.sh
+
+Please, for the sanity of programmers everywhere, do not blindly paste the above command into your terminal and run it. You are downloading a file from the internet, then giving it access to roam freely on your system. The least you can do is give it a once-over and always remain weary of the "curl | sh" idiom. 
