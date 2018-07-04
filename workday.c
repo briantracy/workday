@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <assert.h>
 
 enum return_codes {
     SUCCESS                   = 0,
@@ -18,8 +19,14 @@ enum return_codes {
     ILLEGAL_END_OPERATION     = 7,
     ILLEGAL_ARGUMENT          = 8,
     TIME_RETRIEVE_ERROR       = 9,
-    UNKNOWN_OPERATION_IN_LOG  = 10
+    UNKNOWN_OPERATION_IN_LOG  = 10,
+    MALFORMED_LOG_FILE        = 11
 };
+
+const char EVENT_BEGIN  = 'B';
+const char EVENT_PAUSE  = 'P';
+const char EVENT_RESUME = 'R';
+const char EVENT_END    = 'E';
 /*
     see man 3 ctime
     ctime(3) returns a 26 byte string, including the newline and null terminator.
@@ -52,11 +59,24 @@ int emit_event(char event);
 
 char *current_time_str(void);
 
+void print_malformed_log_message(void);
+
+void p(char *s) {
+    char c = *s;
+    printf("[ ");
+    while (c != '\0') {
+        printf("(%d,'%c') ", c, c);
+        c = *(++s);
+    }
+    printf("]\n");
+}
 
 int testmain() {
+    emit_event('R');
+    
     
     char *line = last_line();
-    printf("[%s]\n", line);
+    p(line);
     
     free(line);
     return 0;
@@ -64,13 +84,7 @@ int testmain() {
 
 int main(int argc, char *argv[])
 {
-    char buff[LOGFILE_BYTES_PER_LINE + 1];
-    snprintf(buff, LOGFILE_BYTES_PER_LINE, "%c %s\n", 'I', current_time_str());
-    printf("[%d]\n", buff[LOGFILE_BYTES_PER_LINE]);
-    printf("[%s]\n", buff);
     
-    char buff1[] = { 'a', 'b', 'c', '\0', 'd', '\0' };
-    printf("[%s]\n", buff1);
     
     return testmain();
     
@@ -108,6 +122,7 @@ int main(int argc, char *argv[])
     return ILLEGAL_ARGUMENT;
 }
 
+
 struct tm parse_time_str(char *buff)
 {
     struct tm time;
@@ -138,9 +153,7 @@ char *current_time_str()
     return ctime(&now);
 }
 
-/*
-    line must be null terminated
-*/
+/// line shall be null terminated
 int append_line(char *line)
 {
     FILE *file = fopen(LOG_FILE, "a");
@@ -148,7 +161,6 @@ int append_line(char *line)
         fprintf(stderr, "[ERROR] could not open file: %s\n", LOG_FILE);
         return FILE_WRITE_FAILURE;
     }
-    
     if (fputs(line, file) < 0) {
         fprintf(stderr, "[ERROR] could not append to file: %s\n", LOG_FILE);
         return FILE_WRITE_FAILURE;
@@ -156,21 +168,20 @@ int append_line(char *line)
     return SUCCESS;
 }
 
+/// Emits the given event at the current time.
 int emit_event(char event)
 {
-    char buff[LOGFILE_BYTES_PER_LINE + 1];
-    snprintf(buff, LOGFILE_BYTES_PER_LINE, "%c %s\n", event, current_time_str());
+    /// allocate extra space for '\n' and '\0'
+    char buff[LOGFILE_BYTES_PER_LINE + 2];
+    snprintf(buff, LOGFILE_BYTES_PER_LINE + 1, "%c %s\n", event, current_time_str());
     
     return append_line(buff);
 }
 
-
-/*
-    Must free the result of this call.
-    Returns NULL iff there is an error opening the file.
-    Return value is null terminated and does not include the
-    newline at the end of the line.
-*/
+///  Must free the result of this call.
+///  Returns NULL iff there is an error opening the file.
+///  Return value is null terminated and does not include the
+///  newline at the end of the line.
 char *last_line(void)
 {
     FILE *file = fopen(LOG_FILE, "r");
@@ -181,12 +192,32 @@ char *last_line(void)
     fseek(file, -LOGFILE_BYTES_PER_LINE, SEEK_END);
     char *buff = malloc(sizeof(char) * LOGFILE_BYTES_PER_LINE); // includes space for \0
     fread(buff, LOGFILE_BYTES_PER_LINE, 1, file);
-    
     buff[LOGFILE_BYTES_PER_LINE - 1] = '\0';
-    return buff;
+    
+    // make sure we are looking at a properly formatted line.
+    // all lines start with an EVENT_
+    switch (buff[0]) {
+        case EVENT_BEGIN:
+        case EVENT_PAUSE:
+        case EVENT_RESUME:
+        case EVENT_END: {
+            assert(buff[LOGFILE_BYTES_PER_LINE - 2] != '\n');
+            return buff;
+        }
+
+        default: {
+            print_malformed_log_message();
+            return NULL;
+        }
+    }
 }
 
-
+void print_malformed_log_message(void)
+{
+    fprintf(stderr, "[ERROR] Cannot parse logfile: %s\n", LOG_FILE);
+    fprintf(stderr, "[ERROR] The logfile must have an entry on each line.\n");
+    fprintf(stderr, "[ERROR] The logfile must be ended with a single newline character.\n");
+}
 
 int usage()
 {

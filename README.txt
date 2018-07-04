@@ -24,13 +24,11 @@ Examples of each step:
     $ curl -o workday.1 'https://raw.githubusercontent.com/briantracy/workday/master/workday.1'
 
 3.
-    $ gcc workday.c
- OR
     $ gcc -Wall -Wextra -Werror -Wpedantic workday.c
 
 4.
     $ mv a.out /usr/local/bin/workday
-    $ chmod +x /usr/local/bin/workday  # might be necessary.
+    $ chmod +x /usr/local/bin/workday  # might be necessary, honestly not sure. 
 
 5.
     $ mv workday.1 /usr/share/man/man1/workday.1
@@ -40,4 +38,4 @@ To accomplish all of these automatically, you can use the install.sh script.
 
     $ curl 'https://raw.githubusercontent.com/briantracy/workday/master/install.sh' -o install.sh && sh install.sh && rm install.sh
 
-Please, for the sanity of programmers everywhere, do not blindly paste the above command into your terminal and run it. You are downloading a file from the internet, then giving it access to roam freely on your system. The least you can do is give it a once-over and always remain weary of the "curl | sh" idiom. 
+Please, for the sanity of programmers everywhere, do not blindly paste the above command into your terminal and run it. You are downloading a file from the internet, then giving it access to roam freely on your system. The least you can do is give it a once-over and always remain weary of the "curl | sh" idiom.
