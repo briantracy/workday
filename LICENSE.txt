@@ -7,9 +7,7 @@ means.
 
 In jurisdictions that recognize copyright laws, the author or authors
 of this software dedicate any and all copyright interest in the
-software to the public domain. We make this dedication for the benefit
-of the public at large and to the detriment of our heirs and
-successors. We intend this dedication to be an overt act of
+software to the public domain. This dedication is an overt act of
 relinquishment in perpetuity of all present and future rights to this
 software under copyright law.
 
@@ -23,3 +21,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org>
 
+I removed the "detriment to our heirs" clause because it's kind of cringe.
+It made me sound like I'm taking some some huge sacrifice releasing this
+into the public domain, when in reality this is just a stupid time keeping utility.
+Literally do whatever you want with it. 
