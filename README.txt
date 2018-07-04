@@ -38,4 +38,4 @@ Examples of each step:
 
 To accomplish all of these automatically, you can use the install.sh script.
 
-    $ curl 'https://github.com/briantracy/workday.git' -o install.sh && sh install.sh && rm install.sh
+    $ curl 'https://raw.githubusercontent.com/briantracy/workday/master/install.sh' -o install.sh && sh install.sh && rm install.sh
