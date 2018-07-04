@@ -13,7 +13,8 @@ INSTALLATION
 2. Obtain a copy of the man page (workday.1)
 3. Compile the source for your platform. 
 4. Move the compiled binary to somewhere in your $PATH (normaly /usr/local/bin)
-5. Move the man page to somewhere in your man path (normally /usr/share/man)
+5. Move the man page to somewhere in your man path. /usr/bin/manpath will output
+   this for you. You should put this man page in /usr/share/man/man1
 
 Examples of each step:
 1, 2.
@@ -33,3 +34,8 @@ Examples of each step:
 
 5.
     $ mv workday.1 /usr/share/man/man1/workday.1
+
+
+To accomplish all of these automatically, you can use the install.sh script.
+
+    $ curl 'https://github.com/briantracy/workday.git' -o install.sh && sh install.sh && rm install.sh
