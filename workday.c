@@ -8,6 +8,7 @@
 #include <time.h>
 #include <assert.h>
 
+
 enum exit_codes {
     SUCCESS                   = 0,
     FILE_READ_FAILURE         = 1,
@@ -51,6 +52,7 @@ int pause(void);
 int resume(void);
 int end(void);
 int statistics(char *);
+int state(void);
 // End Public API //
 
 // Core IO //
@@ -68,11 +70,12 @@ struct tm current_time(void);
 
 char *acceptable_previous_events(char);
 
-void print_malformed_log_message(void);
+int print_malformed_log_message(void);
+int print_illegal_operation_message(char);
 
 void p(char *s) {
     char c = *s;
-    printf("[ ");
+    printf("[");
     while (c != '\0') {
         printf("(%d,'%c') ", c, c);
         c = *(++s);
@@ -81,24 +84,15 @@ void p(char *s) {
 }
 
 int testmain() {
-    p(last_line());
-    printf("%d", strcmp("", last_line()));
-    return 0;
+    
+    
+    return end();
 }
 
 int main(int argc, char *argv[])
 {
-    
-    
-    return testmain();
-    
-    for (int i = 0; i < argc; i++) {
-        printf("%s\n", argv[i]);
-    }
-    printf("%s", current_time_str());
-    
     if (argc < 2) {
-        printf("not enough args\n");
+        fprintf(stderr, "[ERROR] not enough arguments\n");
         return usage();
     }
     const char *routine = argv[1];
@@ -107,7 +101,7 @@ int main(int argc, char *argv[])
         return usage();
     }
     if (strcmp(routine, "-v") == 0 || strcmp(routine, "--version") == 0) {
-        return usage();
+        return version();
     }
     if (strcmp(routine, "begin") == 0) {
         return begin();
@@ -121,8 +115,11 @@ int main(int argc, char *argv[])
     if (strcmp(routine, "end") == 0) {
         return end();
     }
+    if (strcmp(routine, "state") == 0) {
+        return state();
+    }
     
-    fprintf(stderr, "Illegal argument: %s\n", routine);
+    fprintf(stderr, "[ERROR] Illegal argument: %s\n", routine);
     return ILLEGAL_ARGUMENT;
 }
 
@@ -186,6 +183,7 @@ int emit_event(char event)
 ///  Returns NULL iff there is an error opening the file.
 ///  Return value is null terminated and does not include the
 ///  newline at the end of the line.
+///  @return Empty string iff file is empty
 char *last_line(void)
 {
     FILE *file = fopen(LOG_FILE, "r");
@@ -217,23 +215,24 @@ char *last_line(void)
         }
 
         default: {
-            print_malformed_log_message();
+            (void)print_malformed_log_message();
             return NULL;
         }
     }
 }
 
-void print_malformed_log_message(void)
+int print_malformed_log_message(void)
 {
     fprintf(stderr, "[ERROR] Cannot parse logfile: %s\n", LOG_FILE);
     fprintf(stderr, "[ERROR] The logfile must have an entry on each line.\n");
     fprintf(stderr, "[ERROR] The logfile must be ended with a single newline character.\n");
+    return MALFORMED_LOG_FILE;
 }
 
 int usage()
 {
     printf("Helpful Commands:\n");
-    printf("workday [begin|pause|resume|end]\n");
+    printf("workday [begin|pause|resume|end|state|statistics]\n");
     printf("workday [-h|--help]\n");
     printf("workday [-v|--version]\n");
     return SUCCESS;
@@ -263,37 +262,63 @@ int end() {
     printf("[INFO] Ending workday...\n");
     return generic_event(EVENT_END);
 }
-/// returns a string (modeling a set) of the
-/// legitimate events than can preceed the given event.
-/// a_p_e('B') -> "E"
-char *acceptable_previous_events(char event)
-{
-    char *buff = malloc(sizeof(char) * 3);
+
+int state() {
+    printf("[INFO] Determining state of your workday...\n");
+    char *line = last_line();
+    if (line == NULL) return FILE_READ_FAILURE;
     
-    switch (event) {
+    if (strcmp(line, "") == 0) {
+        printf("[INFO] You have not yet started your workday\n");
+        goto __exit;
+    }
+    
+    char op = line[0];
+    switch (op) {
         case EVENT_BEGIN: {
-            snprintf(buff, 2, "%c", EVENT_END);
+            printf("[INFO] You have started your workday\n");
             break;
         }
         case EVENT_PAUSE: {
-            snprintf(buff, 2, "%c", EVENT_BEGIN);
+            printf("[INFO] You are currently paused\n");
             break;
         }
         case EVENT_RESUME: {
-            snprintf(buff, 2, "%c", EVENT_PAUSE);
+            printf("[INFO] You have just resumed your workday\n");
             break;
         }
         case EVENT_END: {
-            snprintf(buff, 3, "%c%c", EVENT_BEGIN, EVENT_RESUME);
+            printf("[INFO] You have ended your workday\n");
             break;
         }
+        default:
+            free(line);
+            return print_malformed_log_message();
+            break;
+    }
+    
+        
+__exit:
+    free(line);
+    return SUCCESS;
+}
+
+/// returns a string (modeling a set) of the
+/// legitimate events than can preceed the given event.
+/// a_p_e('B') -> "E"
+
+char *acceptable_previous_events(char event)
+{
+    switch (event) {
+        case EVENT_BEGIN: return "E";
+        case EVENT_PAUSE: return "B";
+        case EVENT_RESUME: return "P";
+        case EVENT_END: return "BR";
         default: {
             fprintf(stderr, "[ERROR] Cannot determine valid previous events for illegal event: %c\n", event);
             assert(0);
         }
     }
-    
-    return buff;
 }
 
 int generic_event(char event)
@@ -307,17 +332,23 @@ int generic_event(char event)
     free(last_entry);
     
     if (strcmp(last_entry, "") == 0) {
-        // empty file, 
+        // empty file, first event must be 'B'
+        if (event == EVENT_BEGIN) { goto __emit; }
+        else { return print_illegal_operation_message(event); }
     }
     
     if (strchr(acceptable_previous_events(event), previous_event) == NULL) {
-        fprintf(stderr, "[ERROR] Illegal Operation: %c\n", event);
-        fprintf(stderr, "[ERROR] You are not in an appropriate state to perform the requested operation\n");
-        return ILLEGAL_OPERATION;
+        return print_illegal_operation_message(event);
     }
     
-emit:
+__emit:
     return emit_event(event);
 }
 
+int print_illegal_operation_message(char op)
+{
+    fprintf(stderr, "[ERROR] Illegal Operation: %c\n", op);
+    fprintf(stderr, "[ERROR] You are not in an appropriate state to perform the requested operation\n");
+    return ILLEGAL_OPERATION;
+}
 

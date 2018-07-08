@@ -53,6 +53,30 @@ you can specify the location from which
 .Nm workday
 reads and writes. You generally shouldn't have to modify the logfile manually, 
 but if you do, make sure you maintain the following format. Each line is exactly
-LOGFILE_BYTES_PER_LINE bytes long (27 is the current value). 
+LOGFILE_BYTES_PER_LINE bytes long (27 is the current value).
+.Sh EXIT CODES
+If you need to know more about an error, cross reference the program's exit code ($? in bash) against the following list.
+.Bd -literal -offset indent
+enum exit_codes {
+    SUCCESS                   = 0,
+    FILE_READ_FAILURE         = 1,
+    FILE_WRITE_FAILURE        = 2,
+    NO_MEMORY_ERROR           = 3,
+    ILLEGAL_OPERATION         = 4,
+    ILLEGAL_ARGUMENT          = 5,
+    TIME_RETRIEVE_ERROR       = 6,
+    UNKNOWN_OPERATION_IN_LOG  = 7,
+    MALFORMED_LOG_FILE        = 8
+};
+.Ed
+.Sh EVENTS
+.Nm workday
+output often refers to events which are the internal representation for starting, stopping, and (un)pausing your workday.
+.Bd -literal -offset indent
+const char EVENT_BEGIN  = 'B';
+const char EVENT_PAUSE  = 'P';
+const char EVENT_RESUME = 'R';
+const char EVENT_END    = 'E';
+.Ed
 .Sh AUTHORS
-Written by Brian Tracy. More information at briantracy.xyz/software.html
+Written by Brian Tracy. Email all questions and concerns to <brian.tracy33@gmail.com>
