@@ -51,6 +51,8 @@ however, by passing
 .Op --logfile Ar file
 you can specify the location from which 
 .Nm workday
-reads and writes.
+reads and writes. You generally shouldn't have to modify the logfile manually, 
+but if you do, make sure you maintain the following format. Each line is exactly
+LOGFILE_BYTES_PER_LINE bytes long (27 is the current value). 
 .Sh AUTHORS
-Written by Brian Tracy and Ian Woodfill
+Written by Brian Tracy. More information at briantracy.xyz/software.html

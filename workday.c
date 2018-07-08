@@ -8,19 +8,16 @@
 #include <time.h>
 #include <assert.h>
 
-enum return_codes {
+enum exit_codes {
     SUCCESS                   = 0,
     FILE_READ_FAILURE         = 1,
     FILE_WRITE_FAILURE        = 2,
     NO_MEMORY_ERROR           = 3,
-    ILLEGAL_BEGIN_OPERATION   = 4,
-    ILLEGAL_PAUSE_OPERATION   = 5,
-    ILLEGAL_RESUME_OPERATION  = 6,
-    ILLEGAL_END_OPERATION     = 7,
-    ILLEGAL_ARGUMENT          = 8,
-    TIME_RETRIEVE_ERROR       = 9,
-    UNKNOWN_OPERATION_IN_LOG  = 10,
-    MALFORMED_LOG_FILE        = 11
+    ILLEGAL_OPERATION         = 4,
+    ILLEGAL_ARGUMENT          = 5,
+    TIME_RETRIEVE_ERROR       = 6,
+    UNKNOWN_OPERATION_IN_LOG  = 7,
+    MALFORMED_LOG_FILE        = 8
 };
 
 const char EVENT_BEGIN  = 'B';
@@ -42,22 +39,34 @@ const char EVENT_END    = 'E';
 /// excludes null terminator
 const size_t LOGFILE_BYTES_PER_LINE = 27; // excludes null terminator!
 
-
+/// this is a feaux constant because it can be changed at runtime
+/// depending on the --logfile argument
 char *LOG_FILE = "/Users/briantracy/Desktop/projects/workday/workday/file.txt";
 
+// Public API //
 int usage(void);
 int version(void);
-
 int begin(void);
 int pause(void);
 int resume(void);
 int end(void);
+int statistics(char *);
+// End Public API //
 
+// Core IO //
 int append_line(char *);
 char *last_line(void);
-int emit_event(char event);
+int emit_event(char);
+int generic_event(char);
+// End Core IO //
 
+// Time Functions //
 char *current_time_str(void);
+struct tm parse_time_str(char *);
+struct tm current_time(void);
+// End Time Functions //
+
+char *acceptable_previous_events(char);
 
 void print_malformed_log_message(void);
 
@@ -72,13 +81,8 @@ void p(char *s) {
 }
 
 int testmain() {
-    emit_event('R');
-    
-    
-    char *line = last_line();
-    p(line);
-    
-    free(line);
+    p(last_line());
+    printf("%d", strcmp("", last_line()));
     return 0;
 }
 
@@ -138,11 +142,11 @@ struct tm parse_time_str(char *buff)
     }
 }
 
-struct tm *current_time(void)
+struct tm current_time(void)
 {
     time_t now;
     time(&now);
-    return localtime(&now);
+    return *localtime(&now);
 }
 
 /// 26 bytes including null terminator.
@@ -194,6 +198,13 @@ char *last_line(void)
     fread(buff, LOGFILE_BYTES_PER_LINE, 1, file);
     buff[LOGFILE_BYTES_PER_LINE - 1] = '\0';
     
+    fseek(file, 0, SEEK_END);
+    if (ftell(file) == 0) {
+        // empty log file, return empty string
+        buff[0] = '\0';
+        return buff;
+    }
+    
     // make sure we are looking at a properly formatted line.
     // all lines start with an EVENT_
     switch (buff[0]) {
@@ -234,40 +245,79 @@ int version() {
 }
 
 int begin() {
-    printf("begin\n");
-    char *last_entry = last_line();
-    if (last_entry == NULL) {
-        fprintf(stderr, "[ERROR] Aborting workday begin operation\n");
-        return FILE_READ_FAILURE;
-    }
-    
-    char op = last_entry[0];
-    switch (op) {
-        case 'B':
-        case 'P':
-        case 'R': {
-            fprintf(stderr, "[ERROR] Cannot begin workday in this state: %c\n", op);
-            return ILLEGAL_BEGIN_OPERATION;
-        }
-        case 'E': {
-            
-        }
-    }
-    
-    return 0;
+    printf("[INFO] Beginning workday...\n");
+    return generic_event(EVENT_BEGIN);
 }
 
 int pause() {
-    printf("pause\n");
-    return 0;
+    printf("[INFO] Pausing workday...\n");
+    return generic_event(EVENT_PAUSE);
 }
 
 int resume() {
-    printf("resume\n");
-    return 0;
+    printf("[INFO] Resuming workday...\n");
+    return generic_event(EVENT_RESUME);
 }
 
 int end() {
-    printf("end\n");
-    return 0;
+    printf("[INFO] Ending workday...\n");
+    return generic_event(EVENT_END);
 }
+/// returns a string (modeling a set) of the
+/// legitimate events than can preceed the given event.
+/// a_p_e('B') -> "E"
+char *acceptable_previous_events(char event)
+{
+    char *buff = malloc(sizeof(char) * 3);
+    
+    switch (event) {
+        case EVENT_BEGIN: {
+            snprintf(buff, 2, "%c", EVENT_END);
+            break;
+        }
+        case EVENT_PAUSE: {
+            snprintf(buff, 2, "%c", EVENT_BEGIN);
+            break;
+        }
+        case EVENT_RESUME: {
+            snprintf(buff, 2, "%c", EVENT_PAUSE);
+            break;
+        }
+        case EVENT_END: {
+            snprintf(buff, 3, "%c%c", EVENT_BEGIN, EVENT_RESUME);
+            break;
+        }
+        default: {
+            fprintf(stderr, "[ERROR] Cannot determine valid previous events for illegal event: %c\n", event);
+            assert(0);
+        }
+    }
+    
+    return buff;
+}
+
+int generic_event(char event)
+{
+    char *last_entry = last_line();
+    if (last_entry == NULL) {
+        fprintf(stderr, "[ERROR] Aborting operation: %c", event);
+        return FILE_READ_FAILURE;
+    }
+    char previous_event = last_entry[0];
+    free(last_entry);
+    
+    if (strcmp(last_entry, "") == 0) {
+        // empty file, 
+    }
+    
+    if (strchr(acceptable_previous_events(event), previous_event) == NULL) {
+        fprintf(stderr, "[ERROR] Illegal Operation: %c\n", event);
+        fprintf(stderr, "[ERROR] You are not in an appropriate state to perform the requested operation\n");
+        return ILLEGAL_OPERATION;
+    }
+    
+emit:
+    return emit_event(event);
+}
+
+
