@@ -38,7 +38,7 @@ const char EVENT_END    = 'E';
     to file.
 */
 /// excludes null terminator
-const size_t LOGFILE_BYTES_PER_LINE = 27; // excludes null terminator!
+#define LOGFILE_BYTES_PER_LINE 27 // excludes null terminator!
 
 /// this is a feaux constant because it can be changed at runtime
 /// depending on the --logfile argument
@@ -73,6 +73,8 @@ char *acceptable_previous_events(char);
 int print_malformed_log_message(void);
 int print_illegal_operation_message(char);
 
+void parse_logfile(char *);
+
 void p(char *s) {
     char c = *s;
     printf("[");
@@ -84,18 +86,29 @@ void p(char *s) {
 }
 
 int testmain() {
+    char *str = "hello world\n";
+    char *world = &str[6];
+    printf("%s", world);
     
-    
-    return end();
+    return 10;
 }
 
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        fprintf(stderr, "[ERROR] not enough arguments\n");
         return usage();
     }
-    const char *routine = argv[1];
+    
+    int routine_position = 1;
+    if (strncmp("--logfile=", argv[1], strlen("--logfile=")) == 0) {
+        routine_position = 2;
+        parse_logfile(argv[1]);
+    }
+    if (routine_position > argc - 1) {
+        return SUCCESS;
+    }
+
+        const char *routine = argv[routine_position];
     
     if (strcmp(routine, "-h") == 0 || strcmp(routine, "--help") == 0) {
         return usage();
@@ -121,6 +134,13 @@ int main(int argc, char *argv[])
     
     fprintf(stderr, "[ERROR] Illegal argument: %s\n", routine);
     return ILLEGAL_ARGUMENT;
+}
+
+void parse_logfile(char *arg)
+{
+    char *file_name = &(arg[strlen("--logfile=")]);
+    printf("[INFO] Using alternative logfile: %s\n", file_name);
+    LOG_FILE = file_name;
 }
 
 
@@ -244,27 +264,27 @@ int version() {
 }
 
 int begin() {
-    printf("[INFO] Beginning workday...\n");
+    printf("[INFO] Beginning workday ...\n");
     return generic_event(EVENT_BEGIN);
 }
 
 int pause() {
-    printf("[INFO] Pausing workday...\n");
+    printf("[INFO] Pausing workday ...\n");
     return generic_event(EVENT_PAUSE);
 }
 
 int resume() {
-    printf("[INFO] Resuming workday...\n");
+    printf("[INFO] Resuming workday ...\n");
     return generic_event(EVENT_RESUME);
 }
 
 int end() {
-    printf("[INFO] Ending workday...\n");
+    printf("[INFO] Ending workday ...\n");
     return generic_event(EVENT_END);
 }
 
 int state() {
-    printf("[INFO] Determining state of your workday...\n");
+    printf("[INFO] Determining state of your workday ...\n");
     char *line = last_line();
     if (line == NULL) return FILE_READ_FAILURE;
     
